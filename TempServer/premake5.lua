@@ -6,7 +6,7 @@ project "TempServer"
 	targetdir ("../bin/" .. outputdir .. "/%{prj.name}") 
 	objdir   ("../bin-int/" .. outputdir .. "/%{prj.name}") 
 	
-    pchheader "Spch.h"
+    pchheader "src/Spch.h"
     pchsource "src/Spch.cpp"
 
 	defines
@@ -14,6 +14,7 @@ project "TempServer"
 	    "_CRT_SECURE_NO_WARNINGS", 
 		"YAML_CPP_STATIC_DEFINE"
 	}
+	links{"YAML_CPP"}
 	
 	files
 	{
@@ -23,7 +24,7 @@ project "TempServer"
 		"third_party/readerwriterqueue/atomicops.h"
 	}
 
-	includedirs
+	externalincludedirs
 	{
 		"third_party/spdlog/include",
 		"src/Server",
@@ -90,6 +91,9 @@ project "TempServer"
 			"Version.lib",
 			"Winmm.lib"
 		}
+	filter  "system:macosx" 
+		defines{"SERVER_PLATFORM_MACOSX"}
+
 
 		
 

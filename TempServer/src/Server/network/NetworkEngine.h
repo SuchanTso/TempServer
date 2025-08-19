@@ -1,8 +1,15 @@
 #pragma once
 #include<string>
 #include "readerwriterqueue.h"
-#include "data/ByteStream.h"
+#include "Server/data/ByteStream.h"
 namespace Tso {
+    using AppPacketHandler = std::function<void(uint32_t, uint16_t, ByteStream&)>;
+    struct Packet {
+        uint32_t clientId;
+        uint16_t protocolId;
+        ByteStream payload;
+    };
+
 	class TCPChannel;
 	//class UDPChannel;
 	struct ClientConnection {
@@ -21,9 +28,9 @@ namespace Tso {
 		bool static Connect(const std::string& ip, const uint16_t& port);
 		bool static DisConnect();
 		//bool StartServer(const uint16_t port);
-		void static RegistryProtocol(const uint8_t& protocolID, const std::function<ByteStream(const ByteStream&)>& wrapFunc);
-		void static RegistryProtocol(const std::unordered_map<uint8_t, std::function<ByteStream(const ByteStream&)>>& wrapFuncs);
-		void static RegistryRecvFunction(const uint8_t& funcID, const std::function<void(ByteStream&)>& recvFunc);
+		void RegistryProtocol(const uint8_t& protocolID, const std::function<ByteStream(const ByteStream&)>& wrapFunc);
+		void RegistryProtocol(const std::unordered_map<uint8_t, std::function<ByteStream(const ByteStream&)>>& wrapFuncs);
+		void RegistryRecvFunction(const uint8_t& funcID, const std::function<void(ByteStream&)>& recvFunc);
 		bool static HandlerNetwork(const uint8_t& protocolID, const ByteStream& byte, bool Reliable = true);
 		void static OnUpdate(TimeStep ts);
 		void static RegistryScene(Ref<Scene>scene);
@@ -36,8 +43,14 @@ namespace Tso {
 		void AcceptConnections();
 		void RemoveClient(uint32_t clientId);
 		void HandleClient(std::shared_ptr<ClientConnection> client);
-		bool SendToClient(uint32_t clientId, const uint8_t& protocolID, const ByteStream& byte, bool Reliable);
+		bool SendToClient(uint32_t clientId, const uint16_t& protocolID, ByteStream& byte, bool Reliable);
 		bool Broadcast(const uint8_t& protocolID, const ByteStream& byte, bool Reliable);
+        void static SetAppPacketHandler(const AppPacketHandler& handler);
+        void SetAppHandle(const AppPacketHandler& handler);
+        static NetWorkEngine* GetEngine();
+        
+        void SetOnClientDisconnected(const std::function<void(uint32_t)>& handler);
+        
 		//void static DefaultWrap(const uint8_t& protocolID , ByteStream& byte);
 	private:
 		std::unordered_map<uint8_t, std::function<ByteStream(const ByteStream&)>> m_WrapFuncs;
@@ -53,6 +66,15 @@ namespace Tso {
 		std::unordered_map<uint32_t, Ref<ClientConnection>> m_Clients;
 		std::mutex m_ClientMutex;
 		std::queue<uint32_t> m_RemoveClients;
-		moodycamel::ReaderWriterQueue<std::pair<uint8_t, ByteStream>> m_PacketQueue; // 无锁队列
+        moodycamel::ReaderWriterQueue<Packet> m_PacketQueue; // 无锁队列
+        // recall for upper level
+        AppPacketHandler m_AppPacketHandler;
+        std::function<void(uint32_t)> m_OnClientDisconnectedHandler;
+
+//        std::mutex m_PacketMutex;
+
+
+        // inside protocolModuleID = 0
+        void HandleSystemProtocol(Packet& packet);
 	};
 }

@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <filesystem>
+#include <random>
 
 #include "Server/core/Log.h"
 
@@ -36,4 +37,4 @@ enum class ComponentID : uint16_t {
 using vec3 = float[3];
 using UUID = uint64_t;
 using RoomID = uint8_t;
-using PlayerID = uint8_t;
+using PlayerID = uint64_t;

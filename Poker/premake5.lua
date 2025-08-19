@@ -12,12 +12,18 @@ project "Poker"
 	defines
 	{
 		"YAML_CPP_STATIC_DEFINE",
+		"TSO_ENABLE_ASSERTS"
 	}
 
-    includedirs
+    externalincludedirs
 	{
         "%{wks.location}/TempServer/third_party/spdlog/include",
-		"%{wks.location}/TempServer/src"
+		"%{wks.location}/TempServer/src",
+		"%{wks.location}/TempServer/third_party/yaml-cpp/include",
+		"%{wks.location}/TempServer/third_party/readerwriterqueue",
+		"%{wks.location}/%{prj.name}/src",
+
+
 	}
 
 	links { "TempServer" }
@@ -47,7 +53,7 @@ project "Poker"
 
     filter  "system:windows" 
 	    systemversion "latest"
-		 defines { "TSO_PLATFORM_WINDOWS"}
+		 defines { "SERVER_PLATFORM_WINDOWS"}
 		 			
 		links
 		{
@@ -62,15 +68,8 @@ project "Poker"
 
 	filter "system:macosx"
 		defines{
-				"TSO_PLATFORM_MACOSX",
-				"TSO_EDITOR"
+				"SERVER_PLATFORM_MACOSX",
 
-		}
-		links{
-			"Cocoa.framework",
-			"IOKit.framework",
-			"CoreVideo.framework",
-			"OpenGL.framework"
 		}
 		
 

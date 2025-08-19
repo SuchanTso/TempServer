@@ -7,7 +7,7 @@ namespace Tso {
     class INetworkChannel {
     public:
         INetworkChannel() = default;
-        ~INetworkChannel() = default;
+        virtual ~INetworkChannel() = default;
         virtual bool Send(void* data, const size_t& length, const InetAddress& IPAddress) = 0;
         virtual size_t Receive(void* buffer, const size_t& size) = 0;
         virtual bool IsConnected() = 0;
@@ -17,7 +17,7 @@ namespace Tso {
     public:
         TCPChannel();
         TCPChannel(const int& clientSocket , const InetAddress& addr);
-        ~TCPChannel();
+        ~TCPChannel()override;
         virtual bool Send(void* data, const size_t& length, const InetAddress& IPAddress) override;
         bool Send(const void* data, const size_t& length);
         virtual size_t Receive(void* buffer, const size_t& size) override;

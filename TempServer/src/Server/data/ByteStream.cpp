@@ -114,24 +114,17 @@ namespace Tso {
         }*/
     }
 
-    void ByteStream::PackHeader(ByteStream& byte, const ByteStream::Header& header)
-    {
-        byte.writeFront(header.dataLength);
-        byte.writeFront(header.protocol);
-    }
+//    void ByteStream::PackHeader(ByteStream& byte, const ByteStream::Header& header)
+//    {
+//        byte.writeFront(header.dataLength);
+//        byte.writeFront(header.protocol);
+//    }
 
     ByteStream::ByteStream(std::vector<uint8_t> buffer) : buffer(buffer)
     {
     }
 
 
-    template<typename T>
-    void ByteStream::write(const T& value) {
-        SERVER_ASSERT(std::is_arithmetic_v<T> || std::is_enum_v<T>,
-            "Only arithmetic types and enums allowed");
-        const char* data = reinterpret_cast<const char*>(&value);
-        buffer.insert(buffer.end(), data, data + sizeof(T));
-    }
 
     template<typename T>
     void ByteStream::writeFront(const T& value) {
@@ -141,17 +134,12 @@ namespace Tso {
         buffer.insert(buffer.begin(), data, data + sizeof(T));
     }
 
-    // 写入字符串
-    void ByteStream::writeString(const std::string& str) {
-        write<uint32_t>(static_cast<uint32_t>(str.size()));
-        buffer.insert(buffer.end(), str.begin(), str.end());
-    }
 
     // 读取基本类型
 
 
     // 读取字符串
-    std::string ByteStream::readString() {
+    std::string ByteStream::readString()const {
         uint32_t len = read<uint32_t>();
         if (pos + len > buffer.size()) {
             throw std::runtime_error("Read out of bounds");
