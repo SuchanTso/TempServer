@@ -94,7 +94,8 @@ project "TempServer"
 	filter  "system:macosx" 
 		defines{"SERVER_PLATFORM_MACOSX"}
 
-
+	filter "system:linux"
+		defines{"SERVER_PLATFORM_LINUX"}
 		
 
 

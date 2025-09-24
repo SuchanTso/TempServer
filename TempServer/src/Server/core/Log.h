@@ -1,7 +1,7 @@
 #pragma once
 #define SPDLOG_DISABLE_TID_CACHING
 #include "spdlog/spdlog.h"
-#include "Core.h"
+#include "core.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 namespace Tso {

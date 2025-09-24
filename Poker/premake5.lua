@@ -26,7 +26,9 @@ project "Poker"
 
 	}
 
-	links { "TempServer" }
+	links { "YAML_CPP",
+		"pthread",
+		 "TempServer" }
 
 		filter { "configurations:Debug"}
 		defines { "DEBUG"}

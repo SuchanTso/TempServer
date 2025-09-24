@@ -1,7 +1,7 @@
 #pragma once
 #include "Server/logic/Room.h"
 #include "logic/Card.h"
-#include "Pot.h"
+#include "logic/Pot.h"
 namespace Tso
 {
 class PokerPlayer;

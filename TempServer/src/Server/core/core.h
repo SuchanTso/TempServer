@@ -6,6 +6,7 @@
 #define TSO_ASSERT(x, ...) {if(!(x)){SERVER_ERROR("Assertion Failed: {0}",__VA_ARGS__); __builtin_trap();}}
 #define SERVER_ASSERT(x, ...){if(!(x)){SERVER_ERROR("Assertion Failed: {0}",__VA_ARGS__); __builtin_trap();}}
 #else
+        #define SERVER_ASSERT(x, ...)
 #endif
 #else
 #define SERVER_ASSERT(x, ...) 
