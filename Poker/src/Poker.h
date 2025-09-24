@@ -12,6 +12,7 @@ class IModule;
         void CreateRoom();
         IModule* GetModule(const uint8_t& moduleID);
         void OnClientDisconnected(uint32_t clientId);
+        std::string GetUserName(const uint32_t& clientId);
 
     private:
         std::vector<Ref<PokerRoom>> m_RoomList;

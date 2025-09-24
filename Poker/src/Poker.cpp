@@ -9,6 +9,7 @@
 #include "Server/core/LobbyModule.h"
 #include "Server/core/Module.h"
 #include "core/TexasHoldemModule.h"
+#include "core/PokerPlayer.h"
 
 
 using CardSet = std::vector<uint8_t>;
@@ -113,8 +114,16 @@ void Poker::RegistryProtocol(){
         return CreateRef<PokerRoom>(roomId, maxPlayers);
     };
     
+    auto pokerPlayerFactory = [](uint64_t playerID , uint32_t netID, std::string name) -> Ref<Player> {
+        return CreateRef<PokerPlayer>(playerID , netID , name);
+    };
+    
     // 将工厂注册到 LobbyModule
     lobbyPtr->RegisterRoomFactory(Tso::Modules::Lobby::GameType::TexasHoldem, pokerRoomFactory);
+    lobbyPtr->RegisterPlayerFactory(Tso::Modules::Lobby::GameType::TexasHoldem, pokerPlayerFactory);
+    lobbyPtr->RegistrerPlayerNameGetFunction([this](const uint32_t& clientId)->std::string{
+        return this->GetUserName(clientId);
+    });
     // 2. 将模块添加到管理器
     m_Modules[systemModule->GetModuleId()] = std::move(systemModule);
     m_Modules[lobbyModule->GetModuleId()] = std::move(lobbyModule);
@@ -130,9 +139,14 @@ void Poker::OnPacketReceived(uint32_t clientId, uint16_t protocolId, ByteStream&
     if (it != m_Modules.end()) {
         it->second->HandlePacket(clientId, commandId, stream);
     } else {
-        SERVER_WARN("Received message for unknown module ID [%u] from client [%u].", moduleId, clientId);
+        SERVER_WARN("Received message for unknown module ID [{}] from client [{}].", moduleId, clientId);
     }
 }
+
+std::string Poker::GetUserName(const uint32_t& clientId){
+    return static_cast<SystemModule*>(m_Modules[Modules::System::MODULE_ID].get())->GetUserName(clientId);
+}
+
 
 IModule* Poker::GetModule(const uint8_t& moduleID){
     if(m_Modules.find(moduleID) == m_Modules.end()){
@@ -143,7 +157,7 @@ IModule* Poker::GetModule(const uint8_t& moduleID){
 }
 
 void Poker::OnClientDisconnected(uint32_t clientId){
-    SERVER_INFO("Client %u has disconnected. Notifying modules.", clientId);
+    SERVER_INFO("Client {} has disconnected. Notifying modules.", clientId);
     for (auto const& [id, module] : m_Modules) {
         module->OnPlayerDisconnected(clientId);
     }

@@ -1,0 +1,16 @@
+Pokers:
+- Type: 1
+  Point_min: 0
+  Point_max: 12
+- Type: 2
+  Point_min: 13
+  Point_max: 25
+- Type: 3
+  Point_min: 26
+  Point_max: 38
+- Type: 4
+  Point_min: 39
+  Point_max: 51
+- Type: 5
+  Point_min: 52
+  Point_max: 53

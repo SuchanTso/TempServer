@@ -120,8 +120,9 @@ namespace Tso {
 //        byte.writeFront(header.protocol);
 //    }
 
-    ByteStream::ByteStream(std::vector<uint8_t> buffer) : buffer(buffer)
+    ByteStream::ByteStream(std::vector<uint8_t> vecBuffer) : buffer(vecBuffer)
     {
+        SERVER_INFO("incomlete data copied {} from {}" ,buffer.size() , vecBuffer.size());
     }
 
 

@@ -25,6 +25,7 @@ constexpr uint8_t MODULE_ID = 3;
 enum CommandID : uint8_t {
     // C2S: Client to Server
     C2S_PlayerAction = 1,       // 玩家提交动作
+//    C2S_ClientReady = 2, //客户端切换场景等延时回复
 
     // S2C: Server to Client
     S2C_GameStartInfoNtf = 1,   // 游戏开始，包含座位、盲注、筹码信息
@@ -118,6 +119,7 @@ namespace Tso{
         std::unordered_map<uint8_t, CommandHandler> m_CommandHandlers;
 
         void OnPlayerActionReq(uint32_t clientId, const ByteStream& stream);
+        void OnGameSceneCreate(uint32_t clientId, const ByteStream& stream);
 
         // 内部方法
         void TakeOverGame(Ref<PokerRoom> room);

@@ -10,6 +10,7 @@
 #pragma once
 #include "Server/core/Module.h"
 
+
 namespace Tso::Modules::Lobby {
 
     enum class GameType : uint8_t {
@@ -25,6 +26,7 @@ enum CommandID : uint8_t {
     C2S_JoinRoomReq = 2,
     C2S_ReadyReq = 3,
     C2S_GetRoomListReq = 4,
+    C2S_ClientReady = 5,
 
     // S2C
     S2C_CreateRoomRsp = 1,
@@ -58,11 +60,16 @@ struct RoomInfo {
 
 namespace Tso{
     class Room;
+    class Player;
     class LobbyModule : public IModule {
     public:
         // [NEW] 使用工厂模式来解耦房间创建
         using RoomFactory = std::function<Ref<Room>(uint32_t, uint8_t)>;
+        using PlayerFactory = std::function<Ref<Player>(uint64_t , uint32_t, std::string)>;
         void RegisterRoomFactory(Tso::Modules::Lobby::GameType gameType, RoomFactory factory);
+        void RegisterPlayerFactory(Tso::Modules::Lobby::GameType gameType, PlayerFactory factory);
+        void RegistrerPlayerNameGetFunction(std::function<std::string(const uint32_t&)> fun);
+
 
         LobbyModule();
         uint8_t GetModuleId() const override;
@@ -72,6 +79,7 @@ namespace Tso{
         // [NEW] 提供给其他模块查询房间的接口
         Ref<Room> GetRoom(uint32_t roomId);
         std::unordered_map<uint32_t, Ref<Room>>GetRooms(){return m_Rooms;}
+        void BroadcastRoomState(uint32_t roomId);
 
     private:
         using CommandHandler = std::function<void(uint32_t, const ByteStream&)>;
@@ -82,7 +90,6 @@ namespace Tso{
         void OnJoinRoomReq(uint32_t clientId, const ByteStream& stream);
         void OnReadyReq(uint32_t clientId, const ByteStream& stream);
         
-        void BroadcastRoomState(uint32_t roomId);
 
         // [MODIFIED] 数据结构只依赖于抽象基类
         std::unordered_map<uint32_t, Ref<Room>> m_Rooms;
@@ -91,6 +98,9 @@ namespace Tso{
 
         // [NEW] 存储已注册的工厂
         std::unordered_map<Tso::Modules::Lobby::GameType, RoomFactory> m_RoomFactories;
+        std::unordered_map<Tso::Modules::Lobby::GameType, PlayerFactory> m_PlayerFactories;
+        
+        std::function<std::string(const uint32_t&)> GetUserName;
     };
 }
 #endif /* LobbyModule_h */

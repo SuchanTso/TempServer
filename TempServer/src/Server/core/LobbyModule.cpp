@@ -4,16 +4,30 @@
 #include "Server/data/ByteStream.h"
 #include "Server/logic/Room.h"
 #include "Server/logic/Player.h"
+#include "SystemModule.h"
 namespace Tso{
 
     // [NEW] 注册工厂
     void LobbyModule::RegisterRoomFactory(Modules::Lobby::GameType gameType, RoomFactory factory) {
         if (m_RoomFactories.find(gameType) != m_RoomFactories.end()) {
-            SERVER_WARN("GameType %u factory already registered. Overwriting.", (uint8_t)gameType);
+            SERVER_WARN("GameType {} factory already registered. Overwriting.", (uint8_t)gameType);
         }
         m_RoomFactories[gameType] = factory;
-        SERVER_INFO("Registered factory for game type %u.", (uint8_t)gameType);
+        SERVER_INFO("Registered factory for game type {}.", (uint8_t)gameType);
     }
+
+    void LobbyModule::RegisterPlayerFactory(Tso::Modules::Lobby::GameType gameType, PlayerFactory factory){
+        if (m_PlayerFactories.find(gameType) != m_PlayerFactories.end()) {
+            SERVER_WARN("GameType {} factory already registered. Overwriting.", (uint8_t)gameType);
+        }
+        m_PlayerFactories[gameType] = factory;
+        SERVER_INFO("Registered factory for game type {}.", (uint8_t)gameType);
+    }
+
+    void LobbyModule::RegistrerPlayerNameGetFunction(std::function<std::string(const uint32_t&)> fun){
+        GetUserName = fun;
+    }
+
 
     // [NEW] 获取房间接口
     Ref<Room> LobbyModule::GetRoom(uint32_t roomId) {
@@ -35,6 +49,10 @@ namespace Tso{
     void LobbyModule::HandlePacket(uint32_t clientId, uint8_t commandId, ByteStream& stream) {
         auto it = m_CommandHandlers.find(commandId);
         if (it != m_CommandHandlers.end()) it->second(clientId, stream);
+        auto rooms = GetRooms();
+        for(auto& room : rooms){
+            room.second->OnMessageNotify(clientId, commandId, stream);
+        }
     }
 
     // [MODIFIED] 使用工厂创建房间，不再关心具体类型
@@ -45,7 +63,7 @@ namespace Tso{
         
         auto factoryIt = m_RoomFactories.find(gameType);
         if (factoryIt == m_RoomFactories.end()) {
-            SERVER_ERROR("No factory registered for game type %u.", (uint8_t)gameType);
+            SERVER_ERROR("No factory registered for game type {}.", (uint8_t)gameType);
             // ... 发送错误响应给客户端 ...
             return;
         }
@@ -53,14 +71,16 @@ namespace Tso{
         uint32_t newRoomId = m_NextRoomId++;
         Ref<Room> newRoom = factoryIt->second(newRoomId, maxPlayer); // 使用工厂创建
         if (!newRoom) {
-            SERVER_ERROR("Factory for game type %u failed to create a room.", (uint8_t)gameType);
+            SERVER_ERROR("Factory for game type {} failed to create a room.", (uint8_t)gameType);
             return;
         }
         
         // newRoom->SetRoomName(roomName); // Room 基类可以有 SetName 方法
-        
+        newRoom->SetGameType((uint8_t)gameType);
         // Player 的创建也应该是通用的
-        Ref<Player> player = CreateRef<Player>(clientId, "Player" + std::to_string(clientId));
+        PlayerID playerID = strtoull(stream.readString().c_str() , NULL , 10);
+        std::string playerName = GetUserName ? GetUserName(clientId) : "player" + std::to_string(clientId);
+        Ref<Player> player = m_PlayerFactories[gameType](playerID , clientId , playerName);
         newRoom->AddPlayer(clientId, player); // 调用 Room 基类的 AddPlayer
         
         m_Rooms[newRoomId] = newRoom;
@@ -83,8 +103,15 @@ namespace Tso{
             // ... 发送失败响应 ...
             return;
         }
+        if(it->second->IsFull()){
+            //TODO: max full room , unable to join
+            return;
+        }
+        PlayerID playerID = strtoull(stream.readString().c_str() , NULL , 10);
         
-        Ref<Player> player = CreateRef<Player>(clientId, "Player" + std::to_string(clientId));//clientID , playerID
+        std::string playerName = GetUserName ? GetUserName(clientId) : "player" + std::to_string(clientId);
+        Ref<Player> player = m_PlayerFactories[(Modules::Lobby::GameType)it->second->GetGameType()](playerID , clientId, playerName);
+        //CreateRef<Player>(playerID , clientId, "Player" + std::to_string(clientId));//clientID , playerID
         it->second->AddPlayer(clientId, player);
         m_PlayerToRoom[clientId] = roomId;
         
@@ -113,9 +140,6 @@ namespace Tso{
         // LobbyModule 不再关心游戏如何开始，但它可以派发一个事件或提供查询接口
         if (room->AreAllPlayersReady()) { // Room 基类需要 AreAllPlayersReady
             SERVER_INFO("Room {} is ready to start game.", roomId);
-            // 在这里，我们可以派发一个事件，让 TexasHoldemModule 监听并接管
-            // EventBus::Dispatch(RoomReadyToStartEvent(roomId));
-            // 或者，TexasHoldemModule 会自己轮询
         }
     }
 
@@ -132,14 +156,14 @@ namespace Tso{
         const auto& playerList = room->GetPlayerList();
         ntf.write<uint8_t>(playerList.size());
         for (const auto& player : playerList) {
-            ntf.write<PlayerID>(player->GetPlayerID());
+            ntf.writeString(std::to_string(player->GetPlayerID()));
             ntf.writeString(player->GetName());
             ntf.write<uint8_t>(player->IsReady() ? 1 : 0);
         }
         
         uint16_t ntfId = MakeProtocolID(Modules::Lobby::S2C_RoomStateNtf);
         for (const auto& player : playerList) {
-            NetWorkEngine::GetEngine()->SendToClient(player->GetPlayerID(), ntfId, ntf,true);
+            NetWorkEngine::GetEngine()->SendToClient(player->GetNetID(), ntfId, ntf,true);
         }
     }
 

@@ -7,9 +7,18 @@
 #include "Spch.h"
 #include "PokerPlayer.h"
 #include "PokerRoom.h"
+#include "logic/LogHelper.h"
 
 namespace Tso {
 
+PokerPlayer::PokerPlayer(uint64_t& playerID , uint32_t& netID , const std::string& name)
+:Player(playerID , netID , name)
+{
+//    m_ID = playerID;
+//    m_ClientID = netID;
+//    m_Name = name;
+    m_Money = 5000;
+}
 
 
 
@@ -42,6 +51,7 @@ namespace Tso {
         m_TotalBetNumber += num;
         m_Money -= num;
         m_CardState = CardState::Bet;
+        GetPot()->AddValue(num);
     }
     void PokerPlayer::Fold(){
         m_CardState = CardState::Fold;
@@ -51,12 +61,14 @@ namespace Tso {
         m_BetNumber = m_Money;
         m_Money = 0;
         m_TotalBetNumber += m_BetNumber;
+        GetPot()->AddValue(m_BetNumber);
     }
     void PokerPlayer::Raise(const uint64_t& num){
         m_CardState = CardState::Raise;
         m_BetNumber = num;
         m_Money -= num;
         m_TotalBetNumber += num;
+        GetPot()->AddValue(num);
     }
 
 void PokerPlayer::Reset(){
@@ -65,8 +77,16 @@ void PokerPlayer::Reset(){
     m_CardState = CardState::Play;
 }
 
+void PokerPlayer::ResetBetTurn() {
+    m_BetNumber = 0;
+}
+
 
     void PokerPlayer::Calculate(const std::vector<ParsedCard>& commonCards){
+        if(commonCards.size() < 5){
+            SERVER_INFO("No need to calculate");
+            return;
+        }
         SERVER_ASSERT(m_HandCards.size() == 2 && commonCards.size() == 5 , "Unable to calculate with incomplete handcards and comoon cards");
         std::vector<ParsedCard> totalCards;
         totalCards.insert(totalCards.end() , m_HandCards.begin() , m_HandCards.end());
@@ -81,19 +101,21 @@ void PokerPlayer::Reset(){
                         continue;
                     }
                     temCards.emplace_back(totalCards[k]);
-                    if(i == 0 && j == 1){
-                        maxCards = Card::CalCardID(temCards);
-                        continue;
-                    }
-                    else{
-                        CardIdentification temID = Card::CalCardID(temCards);
-                        if(Card::CompareTwoSets(maxCards, temID) == 2){
-                            maxCards = temID;
-                        }
+                }
+                
+                if(i == 0 && j == 1){
+                    maxCards = Card::CalCardID(temCards);
+                }
+                else{
+                    CardIdentification temID = Card::CalCardID(temCards);
+                    if(Card::CompareTwoSets(maxCards, temID) == 2){
+                        maxCards = temID;
                     }
                 }
+                temCards.clear();
             }
         }
+        SERVER_INFO("Player {} final gets [{}]" , GetPlayerID() , CardLevelLog[(int)maxCards.level]);
         m_MaxCards = maxCards;
     }
 

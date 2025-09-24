@@ -23,7 +23,8 @@ namespace Tso {
 class PokerPlayer : public Player {
     public:
 //    PokerPlayer():Player(){};
-    PokerPlayer(PokerPlayer& pokerPlayer) = default;
+    PokerPlayer(PokerPlayer& pokerPlayer) = delete;
+    PokerPlayer(uint64_t& playerID , uint32_t& netID ,const std::string& name);
 //    PokerPlayer(Ref<Player> player);
     RoleState GetPlayerState(){return m_State;}
     void SetPlayerState(const RoleState& state);
@@ -37,6 +38,8 @@ class PokerPlayer : public Player {
     void SetBetNumber(const uint64_t& betNumber){m_BetNumber = betNumber;}
     void Calculate(const std::vector<ParsedCard>& commonCards);
     void SetRoom(PokerRoom* room){m_Room = room;}
+    void SetSeatIndex(const uint8_t& seat){m_Seat = seat;};
+    uint8_t& GetSeatIndex(){return m_Seat;}
     Ref<Pot> GetPot();
     void Bet(const uint64_t& num);
     CardIdentification& GetMaxCardID(){return m_MaxCards;}
@@ -47,6 +50,7 @@ class PokerPlayer : public Player {
     void Fold();
     void AllIn();
     void Raise(const uint64_t& num);
+    void ResetBetTurn();
     
         
     private:
@@ -59,6 +63,7 @@ class PokerPlayer : public Player {
     uint64_t m_TotalBetNumber = 0;//total money each game. for pot calculation;
     CardIdentification m_MaxCards;
     PokerRoom* m_Room = nullptr;
+    uint8_t m_Seat = 0;
     PokerPlayer& operator=(const PokerPlayer& other) {
             if (this != &other) { // 避免自赋值
                 // 1. 调用基类的赋值操作符 (假设 Player 有赋值操作符)

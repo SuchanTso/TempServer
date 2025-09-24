@@ -38,6 +38,8 @@ namespace Tso {
         uint8_t GetModuleId() const override;
         virtual void HandlePacket(uint32_t clientId, uint8_t commandId, ByteStream& stream) override;
         
+        std::string GetUserName(const uint32_t& clientId);
+        
     private:
         using CommandHandler = std::function<void(uint32_t, const ByteStream&)>;
         std::unordered_map<uint8_t, CommandHandler> m_CommandHandlers;

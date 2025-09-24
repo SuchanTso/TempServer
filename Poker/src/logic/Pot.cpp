@@ -15,72 +15,45 @@ namespace Tso {
 
 namespace Utils{
 
-std::vector<Ref<PokerPlayer>> CalWinner(const std::vector<Ref<PokerPlayer>>& players) {
+std::vector<CardInfo> CalWinner(const std::vector<Ref<PokerPlayer>>& players) {
+    std::vector<CardInfo> result;
     if (players.empty()) {
         return {}; // 如果没有玩家，则返回空向量
     }
 
-    std::vector<Ref<PokerPlayer>> winners;
-    winners.reserve(players.size());
+//    std::vector<Ref<PokerPlayer>> winners;
+    result.reserve(players.size());
     CardIdentification winnerID = players[0]->GetMaxCardID(); // 初始化为第一个玩家的手牌
-    winners.push_back(players[0]);
+    CardInfo winner;
+    winner.player = players[0];
+    winner.cardID = winnerID;
+    result.push_back(winner);
 
     for (size_t i = 1; i < players.size(); ++i) {
         CardIdentification playerID = players[i]->GetMaxCardID();
         int res = Card::CompareTwoSets(winnerID, playerID);
         if (res == 0) {
             // 平局
-            winners.push_back(players[i]);
+            CardInfo newWinner = {players[i] , playerID};
+            result.push_back(newWinner);
         } else if (res == 2) {
             // 当前玩家获胜
-            winners.clear();
-            winners.push_back(players[i]);
+            result.clear();
+            CardInfo newWinner = {players[i] , playerID};
+            result.push_back(newWinner);
             winnerID = playerID;  // 更新获胜者的手牌
         }
         // else res == 1，当前赢家获胜，什么都不做
     }
-    return winners;
+    return result;
 }
 
 }
 
 
-//void Pot::Dispatch(const std::vector<Ref<PokerPlayer>>& players ,const std::vector<Ref<PokerPlayer>>& allInPlayers){
-////        if(players.size() == 1 && allInPlayers.empty()){
-////            // for most common situation that one normal person left. take ur money son.
-////            players[0]->AddMoney(m_PotValue);
-////            return;
-////        }
-//    // all in winner
-//    if(players.empty() && allInPlayers.empty()){
-//        
-//    }
-//    auto allinWinners = Utils::CalWinner(allInPlayers);
-//    auto normalWinners = Utils::CalWinner(players);
-//    if(allinWinners.empty()){
-//        uint64_t rewards = m_PotValue / normalWinners.size();
-//        for(auto& winner : normalWinners){
-//            winner->AddMoney(rewards);
-//        }
-//    }
-//    else if(normalWinners.empty()){
-//        for(auto& allInWinner : allinWinners){
-//            uint64_t rewards = allInWinner->GetTotalNumber() * 2 < m_PotValue / allinWinners.size() ?
-//                                allInWinner->GetTotalNumber() * 2 : m_PotValue / allinWinners.size();
-//            SERVER_ASSERT(rewards < m_PotValue , "pot value is not enough");
-//            allInWinner->AddMoney(rewards);
-//            m_PotValue -= rewards;
-//        }
-//    }
-//    else{
-//        auto normalID = normalWinners[0]->GetMaxCardID();
-//        auto allInID = allinWinners[0]->GetMaxCardID();
-//        int res = Card::CompareTwoSets(normalID, allInID);
-//    }
-//    
-//    }
 
-    void Pot::Dispatch(std::vector<Ref<PokerPlayer>>& players, std::vector<Ref<PokerPlayer>>& allInPlayers , const std::vector<Ref<PokerPlayer>>& fullPlayers) {
+std::vector<WinnerInfo> Pot::Dispatch(std::vector<Ref<PokerPlayer>>& players, std::vector<Ref<PokerPlayer>>& allInPlayers , const std::vector<Ref<PokerPlayer>>& fullPlayers) {
+    std::vector<WinnerInfo> res;
         // 1. 准备工作：合并所有玩家，并且按All-in金额排序
         std::vector<Ref<PokerPlayer>> allPlayers = players;
         allPlayers.insert(allPlayers.end(), allInPlayers.begin(), allInPlayers.end()); // 合并
@@ -90,7 +63,7 @@ std::vector<Ref<PokerPlayer>> CalWinner(const std::vector<Ref<PokerPlayer>>& pla
                 player->AddMoney(player->GetTotalNumber());
             }
             m_PotValue = 0;
-            return;
+            return res;
         }
         // Sort players by All-in amount (for creating side pots correctly)
         std::sort(allInPlayers.begin(), allInPlayers.end(), [](const Ref<PokerPlayer>& a, const Ref<PokerPlayer>& b) {
@@ -134,22 +107,25 @@ std::vector<Ref<PokerPlayer>> CalWinner(const std::vector<Ref<PokerPlayer>>& pla
         // 4. 分配奖金
         // 主池
         if (mainPotValue > 0) {
-            std::vector<Ref<PokerPlayer>> mainPotWinners = Utils::CalWinner(mainPotParticipants);
+            std::vector<CardInfo> mainPotWinners = Utils::CalWinner(mainPotParticipants);
             uint64_t rewards = mainPotValue / mainPotWinners.size();
+            res.push_back({mainPotWinners , rewards});
             for (auto& winner : mainPotWinners) {
-                winner->AddMoney(rewards);
+                winner.player->AddMoney(rewards);
             }
         }
         // 边池
         for (auto& sidePot : sidePots) {
-            std::vector<Ref<PokerPlayer>> sidePotWinners = Utils::CalWinner(sidePot.first);
+            std::vector<CardInfo> sidePotWinners = Utils::CalWinner(sidePot.first);
             uint64_t rewards = sidePot.second / sidePotWinners.size();
+            res.push_back({sidePotWinners , rewards});
             for (auto& winner : sidePotWinners) {
-                winner->AddMoney(rewards);
+                winner.player->AddMoney(rewards);
             }
         }
         //ResetBettingAmount();
         m_PotValue = 0;
+        return res;
     }
 
     void Pot::AddValue(const uint64_t &num){

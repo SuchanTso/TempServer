@@ -168,12 +168,12 @@ namespace Tso {
         while (client->active) {
             // ÐÄÌø³¬Ê±¼ì²â
             auto now = std::chrono::steady_clock::now();
-            if (std::chrono::duration_cast<std::chrono::seconds>(now - client->lastActiveTime) > std::chrono::seconds(30)) {
-                SERVER_INFO("Client {} heartbeat timeout", client->clientId);
-                client->active = false;
-                m_RemoveClients.push(client->clientId);
-                break;
-            }
+//            if (std::chrono::duration_cast<std::chrono::seconds>(now - client->lastActiveTime) > std::chrono::seconds(30)) {
+//                SERVER_INFO("Client {} heartbeat timeout", client->clientId);
+//                client->active = false;
+//                m_RemoveClients.push(client->clientId);
+//                break;
+//            }
 
             char chunk[CHUNK_SIZE];
             int received = client->channel->ReceiveNonBlocking(chunk, CHUNK_SIZE);
@@ -276,34 +276,44 @@ namespace Tso {
 
     // ProcessClientBuffer:[totalLength(4bytes)][protocolID(2bytes)][Payload]
         void NetWorkEngine::ProcessClientBuffer(std::shared_ptr<ClientConnection> client, std::vector<uint8_t>& buffer) {
-            ByteStream byte(buffer);
-            SERVER_INFO("Recved {} bytes" , buffer.size());
+            
             while (buffer.size() >= sizeof(uint32_t)) {
-                uint32_t totalPacketSize = byte.read<uint32_t>();
 
+                uint32_t totalPacketSize;
+                memcpy(&totalPacketSize, buffer.data(), sizeof(uint32_t));
+
+                
                 if (buffer.size() < totalPacketSize) {
-                    // incomlete data
-                    SERVER_WARN("incomlete data {} / {}" , buffer.size() , totalPacketSize);
+                    
+                    SERVER_WARN("incomplete data {} / {}", buffer.size(), totalPacketSize);
                     break;
                 }
 
-                // complete data, parse it
-                uint16_t protocolId = byte.read<uint16_t>();//*reinterpret_cast<const uint16_t*>(buffer.data() + sizeof(uint32_t));
-                
-                // get payload
-                const uint8_t* payloadData = buffer.data() + ByteStream::HEADER_SIZE;
-                size_t payloadSize = totalPacketSize - ByteStream::HEADER_SIZE;
+
+                const size_t headerSize = sizeof(uint32_t) + sizeof(uint16_t);
+                if (totalPacketSize < headerSize) {
+                    
+                    SERVER_ERROR("Invalid packet size: {} is smaller than header size {}", totalPacketSize, headerSize);
+                    
+                    buffer.clear();
+                    break;
+                }
+
+                const uint8_t* payloadData = buffer.data() + headerSize;
+                size_t payloadSize = totalPacketSize - headerSize;
                 ByteStream payload(payloadData, payloadSize);
+
+                
+                uint16_t protocolId;
+                memcpy(&protocolId, buffer.data() + sizeof(uint32_t), sizeof(uint16_t));
                 
                 Packet packet{client->clientId, protocolId, payload};
 
-                {
-                    SERVER_INFO("Recved protocol{} from client{}" , protocolId , client->clientId);
-//                    std::lock_guard<std::mutex> lock(m_PacketMutex);
-                    m_PacketQueue.enqueue(packet);
-                }
+                
+                SERVER_INFO("Received protocol {} from client {}", protocolId, client->clientId);
+                m_PacketQueue.enqueue(packet);
 
-                // remove dealt data from buffer
+                
                 buffer.erase(buffer.begin(), buffer.begin() + totalPacketSize);
             }
         }

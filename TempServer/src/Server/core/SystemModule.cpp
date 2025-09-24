@@ -19,6 +19,15 @@ namespace Tso{
         return Tso::Modules::System::MODULE_ID;
     }
 
+    std::string SystemModule::GetUserName(const uint32_t& clientId){
+        std::string res = "Anonymous";
+        if(m_LoggedInUsers.find(clientId) != m_LoggedInUsers.end()){
+            res = m_LoggedInUsers[clientId];
+        }
+        return res;
+    }
+
+
     void SystemModule::HandlePacket(uint32_t clientId, uint8_t commandId, ByteStream& stream) {
         auto it = m_CommandHandlers.find(commandId);
         if (it != m_CommandHandlers.end()) {

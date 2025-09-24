@@ -57,7 +57,7 @@ namespace Tso {
 
 //        void static PackHeader(ByteStream& byte, const Header& header);
 
-        ByteStream(std::vector<uint8_t> buffer);
+        ByteStream(std::vector<uint8_t> vecBuffer);
         ByteStream() = default;
 
         const std::vector<uint8_t>& getBuffer() const { return buffer; }
